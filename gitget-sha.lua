@@ -81,7 +81,7 @@ local function checkSha(shaString, targetFile)
         local contents = handle.readAll()
         handle.close()
         calcSha = Sha1.decode("blob" .. #contents .. "\0..." .. contents)
-        print(targetFile .. ": " .. shaString .. " == " .. calcSha)
+        --print(targetFile .. ": " .. shaString .. " == " .. calcSha)
         return shaString == calcSha
     end
     return false
