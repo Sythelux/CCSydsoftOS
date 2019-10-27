@@ -11,7 +11,7 @@ Modified by Sythelux to check sha-sums of files
 -- Edit these variables to use preset mode.
 -- Whether to download the files asynchronously (huge speed benefits, will also retry failed files)
 -- If false will download the files one by one and use the old output (List each file name as it's downloaded) instead of the progress bar
-local async = false
+local async = true
 
 -- Whether to write to the terminal as files are downloaded
 -- Note that unless checked for this will not affect pre-set start/done code below
