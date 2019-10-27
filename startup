@@ -1,0 +1,2 @@
+print("self update")
+shell.run("gitget-sha", "Sythelux", "CCSydsoftOS")
