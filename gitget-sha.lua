@@ -80,7 +80,7 @@ local function checkSha(shaString, targetFile)
         local handle = fs.open(targetFile, "r")
         local contents = handle.readAll()
         handle.close()
-        calcSha = Sha1.decode("blob" .. #contents .. "\0" .. contents)
+        calcSha = Sha1.decode("blob" .. #contents .. "\0..." .. contents)
         print(targetFile .. ": " .. shaString .. " == " .. calcSha)
         return shaString == calcSha
     end
@@ -144,14 +144,14 @@ else
         -- Send all HTTP requests (async)
         if v.type == "blob" then
             local targetFileName = fs.combine(args[4], v.path)
-            print(
+            --[[print(
                 string.format(
                     "file: %s | exists: %t, sha-match: %t",
                     targetFileName,
                     fs.exists(targetFileName),
                     checkSha(v.sha, targetFileName)
                 )
-            )
+            )]]--
             if not fs.exists(targetFileName) or not checkSha(v.sha, targetFileName) then
                 v.path = v.path:gsub("%s", "%%20")
                 local url =

@@ -1,4 +1,4 @@
-os.loadAPI("../api/NaviDig")
+os.loadAPI("api/NaviDig.lua")
 local tArgs = {...}
 
 local rowLength = 0 or tArgs[1]

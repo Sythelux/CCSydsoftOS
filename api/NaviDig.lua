@@ -1,4 +1,4 @@
-os.loadAPI("Navigator")
+os.loadAPI("api/Navigator.lua")
 
 retries = 64
 navigationLevel = 85
