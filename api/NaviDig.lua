@@ -17,12 +17,12 @@ end
 
 function forward()
     for i = 1, retries do
-        if Navigator.Forward() then
+            if Navigator.Forward() then
             return true
         end
         turtle.dig()
-        return false
     end
+    return false
 end
 
 function up()
@@ -31,14 +31,8 @@ function up()
             return true
         end
         turtle.digUp()
-        return false
     end
-end
-
-function back()
-    turnAround()
-    forward()
-    turnAround()
+    return false
 end
 
 function down()
@@ -47,8 +41,14 @@ function down()
             return true
         end
         turtle.digDown()
-        return false
     end
+    return false
+end
+
+function back()
+    turnAround()
+    forward()
+    turnAround()
 end
 
 function threeWayForward()
