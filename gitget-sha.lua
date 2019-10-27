@@ -141,6 +141,8 @@ else
         -- Send all HTTP requests (async)
         if v.type == "blob" then
             local targetFileName = fs.combine(args[4], v.path)
+            print(fs.exists(targetFileName))
+            print(checkSha(v.sha, targetFileName))
             if not fs.exists(targetFileName) or not checkSha(v.sha, targetFileName) then
                 v.path = v.path:gsub("%s", "%%20")
                 local url =
