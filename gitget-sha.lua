@@ -145,7 +145,12 @@ else
         if v.type == "blob" then
             local targetFileName = fs.combine(args[4], v.path)
             print(
-                targetFileName .. "exists: " .. fs.exists(targetFileName) .. " sha: " .. checkSha(v.sha, targetFileName)
+                string.format(
+                    "file: %s | exists: %t, sha-match: %t",
+                    targetFileName,
+                    fs.exists(targetFileName),
+                    checkSha(v.sha, targetFileName)
+                )
             )
             if not fs.exists(targetFileName) or not checkSha(v.sha, targetFileName) then
                 v.path = v.path:gsub("%s", "%%20")
