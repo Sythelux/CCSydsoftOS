@@ -1,138 +1,168 @@
--------------------------------------------------
----      *** SHA-1 algorithm for Lua ***      ---
--------------------------------------------------
---- Author:  Martin Huesser                   ---
---- Date:    2008-06-16                       ---
---- License: You may use this code in your    ---
----          projects as long as this header  ---
----          stays intact.                    ---
--------------------------------------------------
+-- SHA1 hash function in ComputerCraft
+-- By Anavrins
+-- For help and details, you can PM me on the CC forums
+-- You may use this code in your projects without asking me, as long as credit is given and this header is kept intact
+-- http://www.computercraft.info/forums2/index.php?/user/12870-anavrins
+-- http://pastebin.com/SfL7vxP3
+-- Last update: May 13, 2019
 
-local strlen  = string.len
-local strchar = string.char
-local strbyte = string.byte
-local strsub  = string.sub
-local floor   = math.floor
-local bnot    = bit.bnot
-local band    = bit.band
-local bor     = bit.bor
-local bxor    = bit.bxor
-local shl     = bit.lshift
-local shr     = bit.rshift
-local h0, h1, h2, h3, h4
-
--------------------------------------------------
-
-local function LeftRotate(val, nr)
-	return shl(val, nr) + shr(val, 32 - nr)
+local mod32 = 2^32
+local band    = bit32 and bit32.band or bit.band
+local bor     = bit32 and bit32.bor or bit.bor
+local bnot    = bit32 and bit32.bnot or bit.bnot
+local bxor    = bit32 and bit32.bxor or bit.bxor
+local blshift = bit32 and bit32.lshift or bit.blshift
+local upack   = unpack
+local brshift = function(n, b)
+	local s = n/(2^b)
+	return s-s%1
+end
+local lrotate = function(n, b)
+	local s = n/(2^(32-b))
+	local f = s%1
+	return (s-f) + f*mod32
 end
 
--------------------------------------------------
+local H = {
+	0x67452301,
+	0xefcdab89,
+	0x98badcfe,
+	0x10325476,
+	0xc3d2e1f0,
+}
 
-local function ToHex(num)
-	local i, d
-	local str = ""
-	for i = 1, 8 do
-		d = band(num, 15)
-		if (d < 10) then
-			str = strchar(d + 48) .. str
-		else
-			str = strchar(d + 87) .. str
+local function counter(incr)
+	local t1, t2 = 0, 0
+	if 0xFFFFFFFF - t1 < incr then
+		t2 = t2 + 1
+		t1 = incr - (0xFFFFFFFF - t1) - 1		
+	else t1 = t1 + incr
+	end
+	return t2, t1
+end
+
+local function BE_toInt(bs, i)
+	return blshift((bs[i] or 0), 24) + blshift((bs[i+1] or 0), 16) + blshift((bs[i+2] or 0), 8) + (bs[i+3] or 0)
+end
+
+local function preprocess(data)
+	local len = #data
+	local proc = {}
+	data[#data+1] = 0x80
+	while #data%64~=56 do data[#data+1] = 0 end
+	local blocks = math.ceil(#data/64)
+	for i = 1, blocks do
+		proc[i] = {}
+		for j = 1, 16 do
+			proc[i][j] = BE_toInt(data, 1+((i-1)*64)+((j-1)*4))
 		end
-		num = floor(num / 16)
 	end
-	return str
+	proc[blocks][15], proc[blocks][16] = counter(len*8)
+	return proc
 end
 
--------------------------------------------------
+local function digestblock(w, C)
+	for j = 17, 80 do w[j] = lrotate(bxor(bxor(bxor(w[j-3], w[j-8]), w[j-14]), w[j-16]), 1) end
 
-local function PreProcess(str)
-	local bitlen, i
-	local str2 = ""
-	bitlen = strlen(str) * 8
-	str = str .. strchar(128)
-	i = 56 - band(strlen(str), 63)
-	if (i < 0) then
-		i = i + 64
+	local a, b, c, d, e = upack(C)
+
+	for j = 1, 80 do
+		local f, k = 0, 0
+		if j <= 20 then
+			f = bor(band(b, c), band(bnot(b), d))
+			k = 0x5a827999
+		elseif j <= 40 then
+			f = bxor(bxor(b, c), d)
+			k = 0x6ed9eba1
+		elseif j <= 60 then
+			f = bor(bor(band(b, c), band(b, d)), band(c, d))
+			k = 0x8f1bbcdc
+		elseif j <= 80 then
+			f = bxor(bxor(b, c), d)
+			k = 0xca62c1d6
+		end
+		local temp = (lrotate(a, 5) + f + e + k + w[j])%mod32
+		a, b, c, d, e = temp, a, lrotate(b, 30), c, d
 	end
-	for i = 1, i do
-		str = str .. strchar(0)
-	end
-	for i = 1, 8 do
-		str2 = strchar(band(bitlen, 255)) .. str2
-		bitlen = floor(bitlen / 256)
-	end
-	return str .. str2
+
+	C[1] = (C[1] + a)%mod32
+	C[2] = (C[2] + b)%mod32
+	C[3] = (C[3] + c)%mod32
+	C[4] = (C[4] + d)%mod32
+	C[5] = (C[5] + e)%mod32
+
+	return C
 end
 
--------------------------------------------------
-
-local function MainLoop(str)
-	local a, b, c, d, e, f, k, t
-	local i, j
-	local w = {}
-	while (str ~= "") do
-		for i = 0, 15 do
-			w[i] = 0
-			for j = 1, 4 do
-				w[i] = w[i] * 256 + strbyte(str, i * 4 + j)
+local mt = {
+	__tostring = function(a) return string.char(unpack(a)) end,
+	__index = {
+		toHex = function(self, s) return ("%02x"):rep(#self):format(unpack(self)) end,
+		isEqual = function(self, t)
+			if type(t) ~= "table" then return false end
+			if #self ~= #t then return false end
+			local ret = 0
+			for i = 1, #self do
+				ret = bit32.bor(ret, bxor(self[i], t[i]))
 			end
+			return ret == 0
 		end
-		for i = 16, 79 do
-			w[i] = LeftRotate(bxor(bxor(w[i - 3], w[i - 8]), bxor(w[i - 14], w[i - 16])), 1)
-		end
-		a = h0
-		b = h1
-		c = h2
-		d = h3
-		e = h4
-		for i = 0, 79 do
-			if (i < 20) then
-				f = bor(band(b, c), band(bnot(b), d))
-				k = 1518500249
-			elseif (i < 40) then
-				f = bxor(bxor(b, c), d)
-				k = 1859775393
-			elseif (i < 60) then
-				f = bor(bor(band(b, c), band(b, d)), band(c, d))
-				k = 2400959708
-			else
-				f = bxor(bxor(b, c), d)
-				k = 3395469782
-			end
-			t = LeftRotate(a, 5) + f + e + k + w[i]	
-			e = d
-			d = c
-			c = LeftRotate(b, 30)
-			b = a
-			a = t
-		end
-		h0 = band(h0 + a, 4294967295)
-		h1 = band(h1 + b, 4294967295)
-		h2 = band(h2 + c, 4294967295)
-		h3 = band(h3 + d, 4294967295)
-		h4 = band(h4 + e, 4294967295)
-		str = strsub(str, 65)
+	}
+}
+
+local function toBytes(t, n)
+	local b = {}
+	for i = 1, n do
+		b[(i-1)*4+1] = band(brshift(t[i], 24), 0xFF)
+		b[(i-1)*4+2] = band(brshift(t[i], 16), 0xFF)
+		b[(i-1)*4+3] = band(brshift(t[i], 8), 0xFF)
+		b[(i-1)*4+4] = band(t[i], 0xFF)
 	end
+	return setmetatable(b, mt)
 end
 
--------------------------------------------------
+local function digest(data)
+	local data = data or ""
+	data = type(data) == "table" and {upack(data)} or {tostring(data):byte(1,-1)}
 
-function Sha1(str)
-	str = PreProcess(str)
-	h0  = 1732584193
-	h1  = 4023233417
-	h2  = 2562383102
-	h3  = 0271733878
-	h4  = 3285377520
-	MainLoop(str)
-	return  ToHex(h0) ..
-		ToHex(h1) ..
-		ToHex(h2) ..
-		ToHex(h3) ..
-		ToHex(h4)
+	data = preprocess(data)
+	local C = {upack(H)}
+	for i = 1, #data do C = digestblock(data[i], C) end
+	return toBytes(C, 5)
 end
 
--------------------------------------------------
--------------------------------------------------
--------------------------------------------------
+local function hmac(input, key)
+	local input = type(input) == "table" and {upack(input)} or {tostring(input):byte(1,-1)}
+	local key = type(key) == "table" and {upack(key)} or {tostring(key):byte(1,-1)}
+
+	local blocksize = 64
+
+	key = #key > blocksize and digest(key) or key
+
+	local ipad = {}
+	local opad = {}
+	local padded_key = {}
+
+	for i = 1, blocksize do
+		ipad[i] = bxor(0x36, key[i] or 0)
+		opad[i] = bxor(0x5C, key[i] or 0)
+	end
+
+	for i = 1, #input do
+		ipad[blocksize+i] = input[i]
+	end
+
+	ipad = digest(ipad)
+
+	for i = 1, blocksize do
+		padded_key[i] = opad[i]
+		padded_key[blocksize+i] = ipad[i]
+	end
+
+	return digest(padded_key)
+end
+
+return {
+	digest = digest,
+	hmac   = hmac,
+}

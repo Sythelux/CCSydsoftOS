@@ -11,7 +11,7 @@ Modified by Sythelux to check sha-sums of files
 -- Edit these variables to use preset mode.
 -- Whether to download the files asynchronously (huge speed benefits, will also retry failed files)
 -- If false will download the files one by one and use the old output (List each file name as it's downloaded) instead of the progress bar
-local async = true
+local async = false
 
 -- Whether to write to the terminal as files are downloaded
 -- Note that unless checked for this will not affect pre-set start/done code below
@@ -78,7 +78,7 @@ local function checkSha(shaString, targetFile)
         return false
     else
         contents = fs.open(targetFile, "r")
-        calcSha = Sha1.Sha1("blob" .. contents.len() .. "\0" .. contents)
+        calcSha = Sha1.digest("blob" .. contents.len() .. "\0" .. contents)
         print(targetFile .. ": " .. shaString .. " == " .. calcSha)
         return shaString == calcSha
     end
@@ -90,8 +90,8 @@ if not json then
 end
 
 if not Sha1 then
-    if fs.exists("sha/Sha1") then
-        os.loadAPI("sha/Sha1")
+    if fs.exists("sha/Sha1.lua") then
+        os.loadAPI("sha/Sha1.lua")
     end
 end
 
