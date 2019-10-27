@@ -75,13 +75,16 @@ end
 
 local function checkSha(shaString, targetFile)
     if not Sha1 then
-        return false
+        print("sha not loaded")
     else
-        contents = fs.open(targetFile, "r")
-        calcSha = Sha1.digest("blob" .. contents.len() .. "\0" .. contents)
+        local handle = fs.open(targetFile, "r")
+        local contents = handle.readAll()
+        handle.close()
+        calcSha = Sha1.decode("blob" .. #contents .. "\0" .. contents)
         print(targetFile .. ": " .. shaString .. " == " .. calcSha)
         return shaString == calcSha
     end
+    return false
 end
 
 if not json then
@@ -141,8 +144,9 @@ else
         -- Send all HTTP requests (async)
         if v.type == "blob" then
             local targetFileName = fs.combine(args[4], v.path)
-            print(fs.exists(targetFileName))
-            print(checkSha(v.sha, targetFileName))
+            print(
+                targetFileName .. "exists: " .. fs.exists(targetFileName) .. " sha: " .. checkSha(v.sha, targetFileName)
+            )
             if not fs.exists(targetFileName) or not checkSha(v.sha, targetFileName) then
                 v.path = v.path:gsub("%s", "%%20")
                 local url =
