@@ -16,7 +16,7 @@ function turnAround()
 end
 
 function forward()
-    for i = 0, retries do
+    for i = 1, retries do
         if Navigator.Forward() then
             return true
         end
@@ -26,7 +26,7 @@ function forward()
 end
 
 function up()
-    for i = 0, retries do
+    for i = 1, retries do
         if Navigator.Up() then
             return true
         end
@@ -42,7 +42,7 @@ function back()
 end
 
 function down()
-    for i = 0, retries do
+    for i = 1, retries do
         if Navigator.Down() then
             return true
         end
